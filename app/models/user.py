@@ -7,53 +7,49 @@ from bson import ObjectId
 # Represents an ObjectId field in the database.
 PyObjectId = Annotated[str, BeforeValidator(str)]
 
-class StudentModel(BaseModel):
+class UserModel(BaseModel):
     """
-    Container for a single student record.
+    Container for a single user record.
     """
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
+    uid: str = Field(...)
     name: str = Field(...)
     email: EmailStr = Field(...)
-    course: str = Field(...)
-    gpa: float = Field(..., le=4.0)
     
     model_config = ConfigDict(
         populate_by_name=True,
         arbitrary_types_allowed=True,
         json_schema_extra={
             "example": {
+                "uid": "1234567890",
                 "name": "Jane Doe",
                 "email": "jdoe@example.com",
-                "course": "Experiments, Science, and Fashion in Nanophotonics",
-                "gpa": 3.0,
             }
         },
     )
 
-class UpdateStudentModel(BaseModel):
+class UpdateUserModel(BaseModel):
     """
     A set of optional updates to be made to a document in the database.
     """
+    uid: Optional[str] = None
     name: Optional[str] = None
     email: Optional[EmailStr] = None
-    course: Optional[str] = None
-    gpa: Optional[float] = None
     
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
         json_encoders={ObjectId: str},
         json_schema_extra={
             "example": {
+                "uid": "1234567890",
                 "name": "Jane Doe",
                 "email": "jdoe@example.com",
-                "course": "Experiments, Science, and Fashion in Nanophotonics",
-                "gpa": 3.0,
             }
         },
     )
 
-class StudentCollection(BaseModel):
+class UserCollection(BaseModel):
     """
-    A container holding a list of `StudentModel` instances.
+    A container holding a list of `UserModel` instances.
     """
-    students: List[StudentModel]
+    users: List[UserModel]
