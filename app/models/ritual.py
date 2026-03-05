@@ -19,12 +19,18 @@ class RitualItem(BaseModel):
         name        : The display name of the ritual (e.g. "Morning Run").
         completedOn : A list of dates recording when this ritual was completed.
         createdAt   : The date when the ritual was created.
+        isCounter   : Whether this ritual tracks a count instead of simply marking completed.
+        unit        : The unit of the counter, like 'liters', 'glasses', 'pushups'.
+        countLogs   : Map from YYYY-MM-DD date string to a numerical count. E.g. {'2024-01-01': 5.0}
     """
 
     group: str = Field(..., description="The group or category this ritual belongs to")
     name: str = Field(..., description="The name of the ritual")
     completedOn: List[date] = Field(default=[], description="List of dates when the ritual was completed")
     createdAt: date = Field(..., description="The date when the ritual was created")
+    isCounter: bool = Field(default=False, description="Whether this ritual tracks a count instead of simply marking completed")
+    unit: Optional[str] = Field(default=None, description="The unit of the counter, like 'liters', 'glasses', 'pushups'")
+    countLogs: dict[str, float] = Field(default={}, description="Map from YYYY-MM-DD date string to a numerical count. E.g. {'2024-01-01': 5.0}")
 
 
 class RitualModel(BaseModel):
@@ -58,8 +64,9 @@ class RitualModel(BaseModel):
             "example": {
                 "uid": "1234567890",
                 "activeRitual": [
-                    {"group": "health", "name": "Morning Run", "completedOn": ["2024-01-01", "2024-01-02"], "createdOn": "2024-01-01"},
-                    {"group": "mindfulness", "name": "Meditation", "completedOn": [], "createdOn": "2024-01-01"},
+                    {"group": "health", "name": "Morning Run", "completedOn": ["2024-01-01", "2024-01-02"], "createdAt": "2024-01-01"},
+                    {"group": "mindfulness", "name": "Meditation", "completedOn": [], "createdAt": "2024-01-01"},
+                    {"group": "health", "name": "Drink Water", "createdAt": "2024-01-01", "isCounter": True, "unit": "liters", "countLogs": {"2024-01-01": 2.5, "2024-01-02": 3.0}},
                 ],
                 "deletedRitual": [
                     {"group": "health", "name": "Cold Shower", "completedOn": [], "createdOn": "2024-01-01"},
