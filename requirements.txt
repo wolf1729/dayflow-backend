@@ -1,0 +1,7 @@
+fastapi[standard]      # Web framework for building APIs with Python, "standard" includes extras like uvicorn server & form support
+motor                  # Async MongoDB driver for Python — lets FastAPI talk to MongoDB without blocking
+pymongo                # Sync MongoDB driver (motor depends on it under the hood for core MongoDB operations)
+python-dotenv          # Loads environment variables from a .env file into os.environ
+pydantic               # Data validation library — defines & validates request/response schemas using Python type hints
+pydantic-settings      # Extension of pydantic for managing app settings/configs (reads from .env, env vars, etc.)
+starlette              # Lightweight ASGI framework that FastAPI is built on top of (routing, middleware, requests, etc.)
