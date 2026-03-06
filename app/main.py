@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.routers import student
+from app.routers import ritual
 
 app = FastAPI(
     title="Dayflow API",
@@ -7,7 +7,7 @@ app = FastAPI(
 )
 
 # Include the routers
-app.include_router(student.router)
+app.include_router(ritual.router)
 
 @app.get("/")
 async def read_root():
