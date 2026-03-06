@@ -5,3 +5,4 @@ python-dotenv          # Loads environment variables from a .env file into os.en
 pydantic               # Data validation library — defines & validates request/response schemas using Python type hints
 pydantic-settings      # Extension of pydantic for managing app settings/configs (reads from .env, env vars, etc.)
 starlette              # Lightweight ASGI framework that FastAPI is built on top of (routing, middleware, requests, etc.)
+firebase-admin         # Firebase Admin SDK for Python - for verifying ID tokens and managing users

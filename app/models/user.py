@@ -13,6 +13,7 @@ class UserModel(BaseModel):
     """
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
     uid: str = Field(...)
+    username: str = Field(...)
     name: str = Field(...)
     email: EmailStr = Field(...)
     
@@ -27,29 +28,3 @@ class UserModel(BaseModel):
             }
         },
     )
-
-class UpdateUserModel(BaseModel):
-    """
-    A set of optional updates to be made to a document in the database.
-    """
-    uid: Optional[str] = None
-    name: Optional[str] = None
-    email: Optional[EmailStr] = None
-    
-    model_config = ConfigDict(
-        arbitrary_types_allowed=True,
-        json_encoders={ObjectId: str},
-        json_schema_extra={
-            "example": {
-                "uid": "1234567890",
-                "name": "Jane Doe",
-                "email": "jdoe@example.com",
-            }
-        },
-    )
-
-class UserCollection(BaseModel):
-    """
-    A container holding a list of `UserModel` instances.
-    """
-    users: List[UserModel]

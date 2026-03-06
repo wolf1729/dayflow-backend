@@ -205,3 +205,7 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Firebase service account key (sensitive)
+serviceAccountKey.json
+app/core/serviceAccountKey.json

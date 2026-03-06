@@ -1,0 +1,56 @@
+from fastapi import APIRouter, Body, HTTPException, status
+from pydantic import BaseModel
+from app.models.user import UserModel
+from app.core.database import db
+from app.core.firebase import verify_firebase_token
+from app.services.user_service import generate_username
+
+router = APIRouter(prefix="/auth", tags=["auth"])
+user_collection = db.get_collection("users")
+
+class SyncRequest(BaseModel):
+    idToken: str
+
+@router.post("/sync", response_model=UserModel)
+async def sync_user(request: SyncRequest = Body(...)):
+    """
+    Synchronizes a Firebase user with the MongoDB database.
+    Always generates a new username and stores it in our DB.
+    """
+    decoded_token = verify_firebase_token(request.idToken)
+    uid = decoded_token.get("uid")
+    email = decoded_token.get("email")
+    name = decoded_token.get("name", "User")
+
+    if not uid or not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Token missing uid or email"
+        )
+
+    # Check if user already exists
+    existing_user = await user_collection.find_one({"uid": uid})
+
+    if existing_user:        
+        if "username" not in existing_user:
+            new_username = generate_username(name)
+            await user_collection.update_one(
+                {"uid": uid},
+                {"$set": {"username": new_username}}
+            )
+            existing_user["username"] = new_username
+        
+        return existing_user
+
+    # Create new user
+    new_username = generate_username(name)
+    new_user = UserModel(
+        uid=uid,
+        username=new_username,
+        name=name,
+        email=email
+    )
+    
+    user_dict = new_user.model_dump(by_alias=True, exclude=["id"])
+    await user_collection.insert_one(user_dict)
+    return user_dict
