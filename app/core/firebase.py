@@ -2,39 +2,35 @@ import os
 import firebase_admin
 from firebase_admin import credentials, auth
 from fastapi import HTTPException, status
-
-import json
-
-# Path to service account key file
-# The user should place the serviceAccountKey.json in app/core/
-SERVICE_ACCOUNT_PATH = os.path.join(os.path.dirname(__file__), "serviceAccountKey.json")
-
-# Environment variable for Firebase Service Account JSON (as a string)
-FIREBASE_SERVICE_ACCOUNT_JSON = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
+from app.core.firebaseConfig import firebase_env_vars
 
 if not firebase_admin._apps:
-    if os.path.exists(SERVICE_ACCOUNT_PATH):
+    initialized = False
+    
+    # 1. Try initializing with individual environment variables from firebaseConfig
+    if firebase_env_vars.get("private_key") and firebase_env_vars.get("client_email"):
         try:
-            cred = credentials.Certificate(SERVICE_ACCOUNT_PATH)
+            # Filter out None values
+            cred_dict = {k: v for k, v in firebase_env_vars.items() if v is not None}
+            cred = credentials.Certificate(cred_dict)
             firebase_admin.initialize_app(cred)
+            print("INFO: Firebase initialized using FIREBASE_* env vars from firebaseConfig.py")
+            initialized = True
         except Exception as e:
-            print(f"ERROR: Failed to initialize Firebase with file: {str(e)}")
-    elif FIREBASE_SERVICE_ACCOUNT_JSON:
+            print(f"ERROR: Failed to initialize Firebase with individual env vars: {str(e)}")
+
+    # 2. Final fallback to default/project ID
+    if not initialized:
         try:
-            # Parse the JSON string from the environment variable
-            service_account_info = json.loads(FIREBASE_SERVICE_ACCOUNT_JSON)
-            cred = credentials.Certificate(service_account_info)
-            firebase_admin.initialize_app(cred)
+            options = {}
+            project_id = os.getenv("FIREBASE_PROJECT_ID")
+            if project_id:
+                options['projectId'] = project_id
+            firebase_admin.initialize_app(options=options)
+            print(f"INFO: Firebase initialized using default credentials. Project ID: {project_id or 'Not Set'}")
         except Exception as e:
-            print(f"ERROR: Failed to initialize Firebase with environment variable: {str(e)}")
-    else:
-        # Fallback to default credentials (e.g. from environment variable GOOGLE_APPLICATION_CREDENTIALS)
-        # Or initialize without credentials if running in a Google Cloud environment
-        try:
-            firebase_admin.initialize_app()
-        except Exception:
-            # We'll log a warning instead of crashing, as the user might be setting it up later
-            print("WARNING: Firebase Admin SDK could not be initialized. Please provide serviceAccountKey.json or FIREBASE_SERVICE_ACCOUNT_JSON")
+            print(f"WARNING: Firebase Admin SDK could not be initialized: {str(e)}")
+            print("Please ensure FIREBASE_* environment variables are set correctly.")
 
 def verify_firebase_token(id_token: str):
     """
