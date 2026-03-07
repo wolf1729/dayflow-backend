@@ -296,6 +296,38 @@ async def update_daily_streak(uid: str, request: UpdateStreakRequest = Body(...)
     return result
 
 @router.get(
+    "/{uid}/counter-insights",
+    response_description="Get counter insights data for multi-line graphs",
+)
+async def get_counter_insights(uid: str):
+    """
+    Computes and returns data for a multi-line graph of counter rituals:
+    - counterHabitsHistory: List of counter rituals and their history
+    """
+    record = await ritual_collection.find_one({"uid": uid})
+    if not record:
+        return {"counterHabitsHistory": []}
+
+    active_rituals = record.get("activeRitual", [])
+    archived_rituals = record.get("archivedRitual", [])
+    all_rituals = active_rituals + archived_rituals
+
+    counter_habits_history = []
+
+    for r in all_rituals:
+        if r.get("isCounter"):
+            counter_habits_history.append({
+                "ritual_id": r.get("ritual_id"),
+                "name": r.get("name"),
+                "unit": r.get("unit"),
+                "history": r.get("countLogs", {})
+            })
+
+    return {
+        "counterHabitsHistory": counter_habits_history
+    }
+
+@router.get(
     "/{uid}/insights",
     response_description="Get insights data for graphs",
 )
