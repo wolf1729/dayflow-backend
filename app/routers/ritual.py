@@ -10,7 +10,6 @@ from pydantic import BaseModel
 from app.models.ritual import RitualItem, RitualModel, DeleteGroupRequest
 from app.core.database import db
 
-# Added this to the router file to keep request models close, or we can use generic dict, but BaseModel is better.
 class CompleteRitualRequest(BaseModel):
     timestamp: str
 
@@ -277,16 +276,43 @@ class UpdateStreakRequest(BaseModel):
 )
 async def update_daily_streak(uid: str, request: UpdateStreakRequest = Body(...)):
     """
-    Adds a specified date to the dailyStreak array if it is not already present.
-    Called when a user completes all of their active rituals for the day.
+    Adds a specified date to the dailyStreak array if it is exactly one day after 
+    the last recorded streak. If not, empties the array and restarts the streak.
     """
     record = await ritual_collection.find_one({"uid": uid})
     if not record:
         raise HTTPException(status_code=404, detail=f"User {uid} not found")
 
+    daily_streak = record.get("dailyStreak", [])
+    request_date = request.date
+    
+    if not daily_streak:
+        update_expr = {"$set": {"dailyStreak": [request_date]}}
+    else:
+        last_date_str = daily_streak[-1]
+        
+        # If the date is already the last element, no update needed
+        if last_date_str == request_date:
+            return record
+            
+        try:
+            # Note: Assuming dates are in YYYY-MM-DD format based on frontend logging
+            last_date_obj = datetime.strptime(last_date_str.split('T')[0], "%Y-%m-%d").date()
+            new_date_obj = datetime.strptime(request_date.split('T')[0], "%Y-%m-%d").date()
+            
+            if (new_date_obj - last_date_obj).days == 1:
+                # It's exactly the next day, continue the streak
+                update_expr = {"$push": {"dailyStreak": request_date}}
+            else:
+                # Streak broken, start a new one
+                update_expr = {"$set": {"dailyStreak": [request_date]}}
+        except ValueError:
+            # Fallback if date parsing fails for some old/corrupted data
+            update_expr = {"$set": {"dailyStreak": [request_date]}}
+
     result = await ritual_collection.find_one_and_update(
         {"uid": uid},
-        {"$addToSet": {"dailyStreak": request.date}},
+        update_expr,
         return_document=True
     )
     
