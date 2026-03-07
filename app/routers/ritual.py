@@ -379,5 +379,6 @@ async def get_insights(uid: str):
     return {
         "overallCompletionHistory": overall_completion_history,
         "dailyStreak": record.get("dailyStreak", []),
-        "counterHabitsHistory": counter_habits_history
+        "counterHabitsHistory": counter_habits_history,
+        "totalActiveRituals": len(active_rituals)
     }
