@@ -5,9 +5,14 @@ from typing import List
 from datetime import datetime
 import traceback
 import sys
+from pydantic import BaseModel
 
 from app.models.ritual import RitualItem, RitualModel, DeleteGroupRequest
 from app.core.database import db
+
+# Added this to the router file to keep request models close, or we can use generic dict, but BaseModel is better.
+class CompleteRitualRequest(BaseModel):
+    timestamp: str
 
 router = APIRouter(prefix="/rituals", tags=["rituals"])
 ritual_collection = db.get_collection("rituals")
@@ -226,4 +231,37 @@ async def complete_ritual(uid: str, ritual_id: str, request: CompleteRitualReque
         array_filters=[{"elem.ritual_id": ritual_id}],
         return_document=True
     )
+    return result
+
+class LogCountRequest(BaseModel):
+    date: str
+    count: float
+
+@router.patch(
+    "/{uid}/log-count/{ritual_id}",
+    response_description="Log the current counter value for a specific date",
+    response_model=RitualModel,
+    response_model_by_alias=False,
+)
+async def log_ritual_count(uid: str, ritual_id: str, request: LogCountRequest = Body(...)):
+    """
+    Sets the count value for a specific date in the countLogs map of a counter ritual.
+    """
+    record = await ritual_collection.find_one({"uid": uid})
+    if not record:
+        raise HTTPException(status_code=404, detail=f"User {uid} not found")
+
+    # The field path to update. Example: activeRitual.$[elem].countLogs.2024-03-07
+    update_field = f"activeRitual.$[elem].countLogs.{request.date}"
+
+    result = await ritual_collection.find_one_and_update(
+        {"uid": uid},
+        {"$set": {update_field: request.count}},
+        array_filters=[{"elem.ritual_id": ritual_id}],
+        return_document=True
+    )
+    
+    if not result:
+        raise HTTPException(status_code=404, detail=f"Failed to update count for ritual {ritual_id}")
+        
     return result
