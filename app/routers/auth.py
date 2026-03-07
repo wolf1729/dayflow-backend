@@ -64,3 +64,20 @@ async def sync_user(request: SyncRequest = Body(...)):
     user_dict = new_user.model_dump(by_alias=True, exclude=["id"])
     await user_collection.insert_one(user_dict)
     return user_dict
+
+@router.delete("/{uid}", response_description="Delete user and all associated data")
+async def delete_user_data(uid: str):
+    """
+    Deletes the user from the users collection and all their rituals from the rituals collection.
+    """
+    # Delete the user document
+    user_result = await user_collection.delete_one({"uid": uid})
+    
+    # Delete the user's rituals document
+    ritual_collection = db.get_collection("rituals")
+    ritual_result = await ritual_collection.delete_one({"uid": uid})
+    
+    if user_result.deleted_count == 0 and ritual_result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail=f"No data found for user {uid}")
+        
+    return {"message": f"Successfully deleted data for user {uid}"}
