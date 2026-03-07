@@ -265,3 +265,32 @@ async def log_ritual_count(uid: str, ritual_id: str, request: LogCountRequest = 
         raise HTTPException(status_code=404, detail=f"Failed to update count for ritual {ritual_id}")
         
     return result
+
+class UpdateStreakRequest(BaseModel):
+    date: str
+
+@router.patch(
+    "/{uid}/update-streak",
+    response_description="Add a date to the daily streak array",
+    response_model=RitualModel,
+    response_model_by_alias=False,
+)
+async def update_daily_streak(uid: str, request: UpdateStreakRequest = Body(...)):
+    """
+    Adds a specified date to the dailyStreak array if it is not already present.
+    Called when a user completes all of their active rituals for the day.
+    """
+    record = await ritual_collection.find_one({"uid": uid})
+    if not record:
+        raise HTTPException(status_code=404, detail=f"User {uid} not found")
+
+    result = await ritual_collection.find_one_and_update(
+        {"uid": uid},
+        {"$addToSet": {"dailyStreak": request.date}},
+        return_document=True
+    )
+    
+    if not result:
+        raise HTTPException(status_code=500, detail="Failed to update daily streak")
+        
+    return result

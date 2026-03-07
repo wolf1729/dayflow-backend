@@ -56,6 +56,7 @@ class RitualModel(BaseModel):
     id: Optional[PyObjectId] = Field(alias="_id", default=None, description="MongoDB document ID")
     uid: str = Field(..., description="Unique user ID this ritual record belongs to")
     activeRitual: List[RitualItem] = Field(..., description="List of currently active rituals")
+    dailyStreak: List[str] = Field(default=[], description="List of dates when all daily rituals were completed")
     deletedRitual: List[RitualItem] = Field(..., description="List of deleted rituals")
     archivedRitual: List[RitualItem] = Field(..., description="List of archived rituals")
 
