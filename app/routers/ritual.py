@@ -2,7 +2,9 @@ from fastapi import APIRouter, Body, HTTPException, status
 from fastapi.responses import Response
 from bson import ObjectId
 from typing import List
-from datetime import date
+from datetime import datetime
+import traceback
+import sys
 
 from app.models.ritual import RitualItem, RitualModel
 from app.core.database import db
@@ -22,32 +24,39 @@ async def add_ritual(uid: str, ritual_item: RitualItem = Body(...)):
     Adds a new ritual to the 'activeRitual' list for the given user ID (uid).
     If no ritual record exists for the user, one is created.
     """
-    # Check if the user's ritual record already exists
-    existing_record = await ritual_collection.find_one({"uid": uid})
-    
-    # Prepare the ritual item data
-    # Ensure dates are handled if they are not already (Pydantic usually handles this)
-    ritual_data = ritual_item.model_dump()
-    
-    if existing_record:
-        # Append to activeRitual list
-        result = await ritual_collection.find_one_and_update(
-            {"uid": uid},
-            {"$push": {"activeRitual": ritual_data}},
-            return_document=True
+    try:
+        # Check if the user's ritual record already exists
+        existing_record = await ritual_collection.find_one({"uid": uid})
+        
+        # Prepare the ritual item data
+        ritual_data = ritual_item.model_dump()
+        
+        if existing_record:
+            # Append to activeRitual list
+            result = await ritual_collection.find_one_and_update(
+                {"uid": uid},
+                {"$push": {"activeRitual": ritual_data}},
+                return_document=True
+            )
+            return result
+        else:
+            # Create a new record for the user
+            new_record = RitualModel(
+                uid=uid,
+                activeRitual=[ritual_item],
+                deletedRitual=[],
+                archivedRitual=[]
+            )
+            new_record_dict = new_record.model_dump(by_alias=True, exclude=["id"])
+            await ritual_collection.insert_one(new_record_dict)
+            return new_record_dict
+    except Exception as e:
+        print(f"Error in add_ritual for uid {uid}: {e}")
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
         )
-        return result
-    else:
-        # Create a new record for the user
-        new_record = RitualModel(
-            uid=uid,
-            activeRitual=[ritual_item],
-            deletedRitual=[],
-            archivedRitual=[]
-        )
-        new_record_dict = new_record.model_dump(by_alias=True, exclude=["id"])
-        await ritual_collection.insert_one(new_record_dict)
-        return new_record_dict
 
 @router.get(
     "/{uid}",
@@ -71,12 +80,12 @@ async def get_user_rituals(uid: str):
     )
 
 @router.patch(
-    "/{uid}/archive/{ritual_name}",
+    "/{uid}/archive/{ritual_id}",
     response_description="Archive a ritual",
     response_model=RitualModel,
     response_model_by_alias=False,
 )
-async def archive_ritual(uid: str, ritual_name: str):
+async def archive_ritual(uid: str, ritual_id: str):
     """
     Moves a ritual from 'activeRitual' to 'archivedRitual'.
     """
@@ -87,16 +96,16 @@ async def archive_ritual(uid: str, ritual_name: str):
 
     # Find the ritual in activeRitual
     active_rituals = record.get("activeRitual", [])
-    ritual_to_archive = next((r for r in active_rituals if r["name"] == ritual_name), None)
+    ritual_to_archive = next((r for r in active_rituals if r["ritual_id"] == ritual_id), None)
 
     if not ritual_to_archive:
-        raise HTTPException(status_code=404, detail=f"Ritual '{ritual_name}' not found in active rituals")
+        raise HTTPException(status_code=404, detail=f"Ritual ID '{ritual_id}' not found in active rituals")
 
     # Move from active to archived
     result = await ritual_collection.find_one_and_update(
         {"uid": uid},
         {
-            "$pull": {"activeRitual": {"name": ritual_name}},
+            "$pull": {"activeRitual": {"ritual_id": ritual_id}},
             "$push": {"archivedRitual": ritual_to_archive}
         },
         return_document=True
@@ -104,12 +113,12 @@ async def archive_ritual(uid: str, ritual_name: str):
     return result
 
 @router.patch(
-    "/{uid}/delete/{ritual_name}",
+    "/{uid}/delete/{ritual_id}",
     response_description="Delete a ritual (move to deleted)",
     response_model=RitualModel,
     response_model_by_alias=False,
 )
-async def delete_ritual(uid: str, ritual_name: str):
+async def delete_ritual(uid: str, ritual_id: str):
     """
     Moves a ritual from 'activeRitual' or 'archivedRitual' to 'deletedRitual'.
     """
@@ -122,23 +131,23 @@ async def delete_ritual(uid: str, ritual_name: str):
     source_list = None
 
     active_rituals = record.get("activeRitual", [])
-    ritual_to_delete = next((r for r in active_rituals if r["name"] == ritual_name), None)
+    ritual_to_delete = next((r for r in active_rituals if r["ritual_id"] == ritual_id), None)
     if ritual_to_delete:
         source_list = "activeRitual"
     else:
         archived_rituals = record.get("archivedRitual", [])
-        ritual_to_delete = next((r for r in archived_rituals if r["name"] == ritual_name), None)
+        ritual_to_delete = next((r for r in archived_rituals if r["ritual_id"] == ritual_id), None)
         if ritual_to_delete:
             source_list = "archivedRitual"
 
     if not ritual_to_delete:
-        raise HTTPException(status_code=404, detail=f"Ritual '{ritual_name}' not found in active or archived rituals")
+        raise HTTPException(status_code=404, detail=f"Ritual ID '{ritual_id}' not found in active or archived rituals")
 
     # Move from source list to deletedRitual
     result = await ritual_collection.find_one_and_update(
         {"uid": uid},
         {
-            "$pull": {source_list: {"name": ritual_name}},
+            "$pull": {source_list: {"ritual_id": ritual_id}},
             "$push": {"deletedRitual": ritual_to_delete}
         },
         return_document=True

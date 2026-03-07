@@ -3,7 +3,8 @@ from pydantic import ConfigDict, BaseModel, Field, EmailStr
 from pydantic.functional_validators import BeforeValidator
 from typing_extensions import Annotated
 from bson import ObjectId
-from datetime import date
+from datetime import datetime
+import uuid
 
 # Represents an ObjectId field in the database.
 # Converts MongoDB's ObjectId to a plain string automatically.
@@ -24,10 +25,11 @@ class RitualItem(BaseModel):
         countLogs   : Map from YYYY-MM-DD date string to a numerical count. E.g. {'2024-01-01': 5.0}
     """
 
+    ritual_id: str = Field(default_factory=lambda: str(uuid.uuid4()), description="Unique ID for the ritual")
     group: str = Field(..., description="The group or category this ritual belongs to")
     name: str = Field(..., description="The name of the ritual")
-    completedOn: List[date] = Field(default=[], description="List of dates when the ritual was completed")
-    createdAt: date = Field(..., description="The date when the ritual was created")
+    completedOn: List[str] = Field(default=[], description="List of dates when the ritual was completed")
+    createdAt: str = Field(..., description="The date when the ritual was created")
     isCounter: bool = Field(default=False, description="Whether this ritual tracks a count instead of simply marking completed")
     unit: Optional[str] = Field(default=None, description="The unit of the counter, like 'liters', 'glasses', 'pushups'")
     countLogs: dict[str, float] = Field(default={}, description="Map from YYYY-MM-DD date string to a numerical count. E.g. {'2024-01-01': 5.0}")
