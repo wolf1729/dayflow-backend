@@ -294,3 +294,58 @@ async def update_daily_streak(uid: str, request: UpdateStreakRequest = Body(...)
         raise HTTPException(status_code=500, detail="Failed to update daily streak")
         
     return result
+
+@router.get(
+    "/{uid}/insights",
+    response_description="Get insights data for graphs",
+)
+async def get_insights(uid: str):
+    """
+    Computes and returns data for the Insights line graphs:
+    - overallCompletionHistory: { "YYYY-MM-DD": total_completed }
+    - dailyStreak: List of dates where all rituals were completed
+    - counterHabitsHistory: List of counter rituals and their history
+    """
+    record = await ritual_collection.find_one({"uid": uid})
+    if not record:
+        # Return empty data structure if user has no rituals
+        return {
+            "overallCompletionHistory": {},
+            "dailyStreak": [],
+            "counterHabitsHistory": []
+        }
+
+    active_rituals = record.get("activeRitual", [])
+    archived_rituals = record.get("archivedRitual", [])
+    
+    # We combine active and archived rituals to get a full history
+    all_rituals = active_rituals + archived_rituals
+
+    overall_completion_history = {}
+    counter_habits_history = []
+
+    for r in all_rituals:
+        # 1. Aggregate overall completions
+        completed_on = r.get("completedOn", [])
+        for timestamp in completed_on:
+            # Extract just the date part (YYYY-MM-DD)
+            date_str = timestamp.split('T')[0]
+            if date_str in overall_completion_history:
+                overall_completion_history[date_str] += 1
+            else:
+                overall_completion_history[date_str] = 1
+
+        # 2. Extract counter habitats
+        if r.get("isCounter"):
+            counter_habits_history.append({
+                "ritual_id": r.get("ritual_id"),
+                "name": r.get("name"),
+                "unit": r.get("unit"),
+                "history": r.get("countLogs", {})
+            })
+
+    return {
+        "overallCompletionHistory": overall_completion_history,
+        "dailyStreak": record.get("dailyStreak", []),
+        "counterHabitsHistory": counter_habits_history
+    }
