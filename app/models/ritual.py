@@ -79,3 +79,7 @@ class RitualModel(BaseModel):
             }
         },
     )
+
+class DeleteGroupRequest(BaseModel):
+    uid: str
+    group_name: str
