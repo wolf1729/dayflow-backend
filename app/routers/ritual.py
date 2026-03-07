@@ -198,3 +198,32 @@ async def delete_ritual(uid: str, ritual_id: str):
         return_document=True
     )
     return result
+
+@router.patch(
+    "/{uid}/complete/{ritual_id}",
+    response_description="Mark a ritual as complete for the day",
+    response_model=RitualModel,
+    response_model_by_alias=False,
+)
+async def complete_ritual(uid: str, ritual_id: str, request: CompleteRitualRequest = Body(...)):
+    """
+    Appends the given timestamp to the completedOn array of the specified active ritual.
+    """
+    record = await ritual_collection.find_one({"uid": uid})
+    if not record:
+        raise HTTPException(status_code=404, detail=f"User {uid} not found")
+
+    active_rituals = record.get("activeRitual", [])
+    target_ritual = next((r for r in active_rituals if r["ritual_id"] == ritual_id), None)
+    
+    if not target_ritual:
+        raise HTTPException(status_code=404, detail=f"Ritual '{ritual_id}' not found in active rituals")
+
+    # Update the specific ritual using array_filters
+    result = await ritual_collection.find_one_and_update(
+        {"uid": uid},
+        {"$push": {"activeRitual.$[elem].completedOn": request.timestamp}},
+        array_filters=[{"elem.ritual_id": ritual_id}],
+        return_document=True
+    )
+    return result
