@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional, List
 from pydantic import ConfigDict, BaseModel, Field, EmailStr
 from pydantic.functional_validators import BeforeValidator
@@ -16,6 +17,7 @@ class UserModel(BaseModel):
     username: str = Field(...)
     name: str = Field(...)
     email: EmailStr = Field(...)
+    createdAt: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
     
     model_config = ConfigDict(
         populate_by_name=True,
@@ -25,6 +27,7 @@ class UserModel(BaseModel):
                 "uid": "1234567890",
                 "name": "Jane Doe",
                 "email": "jdoe@example.com",
+                "createdAt": "2024-03-07T14:30:00.000Z"
             }
         },
     )

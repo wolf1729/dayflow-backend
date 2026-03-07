@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Body, HTTPException, status
+from datetime import datetime
 from pydantic import BaseModel
 from app.models.user import UserModel
 from app.core.database import db
@@ -32,13 +33,22 @@ async def sync_user(request: SyncRequest = Body(...)):
     existing_user = await user_collection.find_one({"uid": uid})
 
     if existing_user:        
+        updates = {}
         if "username" not in existing_user:
             new_username = generate_username(name)
+            updates["username"] = new_username
+            existing_user["username"] = new_username
+            
+        if "createdAt" not in existing_user:
+            created_at = datetime.utcnow().isoformat()
+            updates["createdAt"] = created_at
+            existing_user["createdAt"] = created_at
+            
+        if updates:
             await user_collection.update_one(
                 {"uid": uid},
-                {"$set": {"username": new_username}}
+                {"$set": updates}
             )
-            existing_user["username"] = new_username
         
         return existing_user
 
