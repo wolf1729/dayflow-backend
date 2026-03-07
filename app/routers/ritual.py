@@ -9,10 +9,53 @@ import sys
 from app.models.ritual import RitualItem, RitualModel, DeleteGroupRequest
 from app.core.database import db
 
-from pydantic import BaseModel
-
 router = APIRouter(prefix="/rituals", tags=["rituals"])
 ritual_collection = db.get_collection("rituals")
+
+@router.post(
+    "/delete-group",
+    response_description="Delete all active rituals in a specific group",
+    response_model=RitualModel,
+    response_model_by_alias=False,
+)
+async def delete_group_rituals(request: DeleteGroupRequest = Body(...)):
+    """
+    Moves all active rituals of a specific group to the deletedRitual list.
+    """
+    uid = request.uid
+    group_name = request.group_name
+
+    record = await ritual_collection.find_one({"uid": uid})
+    if not record:
+        raise HTTPException(status_code=404, detail=f"User {uid} not found")
+
+    active_rituals = record.get("activeRitual", [])
+    
+    # Filter rituals: those to keep (active) and those to delete
+    rituals_to_keep = []
+    rituals_to_delete = []
+    
+    for r in active_rituals:
+        if r.get("group") == group_name or (not r.get("group") and group_name == "General"):
+            rituals_to_delete.append(r)
+        else:
+            rituals_to_keep.append(r)
+
+    if not rituals_to_delete:
+        # No rituals found to delete, just return the current record
+        return record
+
+    # Perform the update
+    result = await ritual_collection.find_one_and_update(
+        {"uid": uid},
+        {
+            "$set": {"activeRitual": rituals_to_keep},
+            "$push": {"deletedRitual": {"$each": rituals_to_delete}}
+        },
+        return_document=True
+    )
+    return result
+
 
 @router.post(
     "/{uid}",
@@ -151,50 +194,6 @@ async def delete_ritual(uid: str, ritual_id: str):
         {
             "$pull": {source_list: {"ritual_id": ritual_id}},
             "$push": {"deletedRitual": ritual_to_delete}
-        },
-        return_document=True
-    )
-    return result
-
-@router.post(
-    "/delete-group",
-    response_description="Delete all active rituals in a specific group",
-    response_model=RitualModel,
-    response_model_by_alias=False,
-)
-async def delete_group_rituals(request: DeleteGroupRequest = Body(...)):
-    """
-    Moves all active rituals of a specific group to the deletedRitual list.
-    """
-    uid = request.uid
-    group_name = request.group_name
-
-    record = await ritual_collection.find_one({"uid": uid})
-    if not record:
-        raise HTTPException(status_code=404, detail=f"User {uid} not found")
-
-    active_rituals = record.get("activeRitual", [])
-    
-    # Filter rituals: those to keep (active) and those to delete
-    rituals_to_keep = []
-    rituals_to_delete = []
-    
-    for r in active_rituals:
-        if r.get("group") == group_name or (not r.get("group") and group_name == "General"):
-            rituals_to_delete.append(r)
-        else:
-            rituals_to_keep.append(r)
-
-    if not rituals_to_delete:
-        # No rituals found to delete, just return the current record
-        return record
-
-    # Perform the update
-    result = await ritual_collection.find_one_and_update(
-        {"uid": uid},
-        {
-            "$set": {"activeRitual": rituals_to_keep},
-            "$push": {"deletedRitual": {"$each": rituals_to_delete}}
         },
         return_document=True
     )
