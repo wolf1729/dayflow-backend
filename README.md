@@ -1,6 +1,11 @@
 # Dayflow Backend API
 
-This is the FastAPI backend for the Dayflow application, using MongoDB for the database.
+This is the FastAPI backend for the Dayflow application, using MongoDB for the database and Firebase for authentication.
+
+**Deployed Server URL**: [https://dayflow-backend-llwn.onrender.com](https://dayflow-backend-llwn.onrender.com)
+
+> [!NOTE]
+> To keep the server alive, we are using **UptimeRobot** to ping the server every 10 minutes.
 
 ## Folder Structure
 
@@ -15,11 +20,13 @@ dayflow-backend/
 │   │   ├── config.py    (Pydantic Settings for env vars like MONGO_URI)
 │   │   └── database.py  (MongoDB client initialization)
 │   ├── models/
-│   │   └── student.py   (Pydantic schemas and validation)
+│   │   ├── ritual.py    (Ritual Pydantic schemas)
+│   │   └── user.py      (User Pydantic schemas)
 │   ├── routers/         (Controllers)
-│   │   └── student.py   (HTTP endpoints, request/response handling)
+│   │   ├── auth.py      (Authentication endpoints)
+│   │   └── ritual.py    (Ritual management endpoints)
 │   └── services/        (Business Logic)
-│       └── student.py   (Database operations, complex logic)
+│       └── ritual.py    (Database operations for rituals)
 ├── main.py              (Entry point script to run with uvicorn)
 ├── requirements.txt     (Project dependencies)
 └── .env                 (Environment variables - ignored by git)
@@ -43,9 +50,11 @@ dayflow-backend/
    pip install -r requirements.txt
    ```
 
-3. Ensure you have your `.env` file configured in the root `dayflow-backend/` directory with your MongoDB connection string:
+3. Ensure you have your `.env` file configured in the root `dayflow-backend/` directory:
    ```env
-   MONGO_URI=mongodb://localhost:27017  # Or your actual connection string
+   MONGO_URI=your_mongodb_connection_string
+   FIREBASE_SERVICE_ACCOUNT_JSON=path_to_service_account.json
+   # Or provide firebase credentials as individual env vars if supported by your config
    ```
 
 ## Running the Server
