@@ -14,22 +14,27 @@ The application is structured for production-readiness, separating concerns into
 ```
 dayflow-backend/
 ├── app/
-│   ├── __init__.py      (Initializes the app module)
-│   ├── main.py          (FastAPI app initialization and router inclusion)
+│   ├── __init__.py          (Initializes the app module)
+│   ├── main.py              (FastAPI app initialization and router inclusion)
 │   ├── core/
-│   │   ├── config.py    (Pydantic Settings for env vars like MONGO_URI)
-│   │   └── database.py  (MongoDB client initialization)
+│   │   ├── config.py        (Pydantic Settings for env vars like MONGO_URI)
+│   │   ├── database.py      (MongoDB client initialization)
+│   │   ├── dependencies.py  (Dependency injection utilities)
+│   │   ├── firebase.py      (Firebase Admin SDK initialization)
+│   │   ├── firebaseConfig.py (Firebase configuration)
+│   │   └── serviceAccountKey.json (Firebase service account credentials)
 │   ├── models/
-│   │   ├── ritual.py    (Ritual Pydantic schemas)
-│   │   └── user.py      (User Pydantic schemas)
-│   ├── routers/         (Controllers)
-│   │   ├── auth.py      (Authentication endpoints)
-│   │   └── ritual.py    (Ritual management endpoints)
-│   └── services/        (Business Logic)
-│       └── ritual.py    (Database operations for rituals)
-├── main.py              (Entry point script to run with uvicorn)
-├── requirements.txt     (Project dependencies)
-└── .env                 (Environment variables - ignored by git)
+│   │   ├── ritual.py        (Ritual Pydantic schemas)
+│   │   └── user.py          (User Pydantic schemas)
+│   ├── routers/             (Controllers)
+│   │   ├── auth.py          (Authentication endpoints)
+│   │   └── ritual.py        (Ritual management endpoints)
+│   └── services/            (Business Logic)
+│       ├── __init__.py
+│       └── user_service.py  (User-specific business logic)
+├── main.py                  (Entry point script to run with uvicorn)
+├── requirements.txt         (Project dependencies)
+└── .env                     (Environment variables - ignored by git)
 ```
 
 ## Setup & Installation
@@ -50,11 +55,20 @@ dayflow-backend/
    pip install -r requirements.txt
    ```
 
-3. Ensure you have your `.env` file configured in the root `dayflow-backend/` directory:
+3. Configure your environment variables. Copy the `.env.example` file to `.env` and fill in your credentials:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   _Note: On Windows, use `copy .env.example .env`_
+
+   Ensure you have your `.env` file configured in the root `dayflow-backend/` directory:
+
    ```env
    MONGO_URI=your_mongodb_connection_string
    FIREBASE_SERVICE_ACCOUNT_JSON=path_to_service_account.json
-   # Or provide firebase credentials as individual env vars if supported by your config
+   # ... and other variables from .env.example
    ```
 
 ## Running the Server
