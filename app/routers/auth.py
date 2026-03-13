@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Body, HTTPException, status
+from fastapi.concurrency import run_in_threadpool
 from datetime import datetime
 from pydantic import BaseModel
 from app.models.user import UserModel
@@ -18,7 +19,7 @@ async def sync_user(request: SyncRequest = Body(...)):
     Synchronizes a Firebase user with the MongoDB database.
     Always generates a new username and stores it in our DB.
     """
-    decoded_token = verify_firebase_token(request.idToken)
+    decoded_token = await run_in_threadpool(verify_firebase_token, request.idToken)
     uid = decoded_token.get("uid")
     email = decoded_token.get("email")
     name = decoded_token.get("name", "User")
