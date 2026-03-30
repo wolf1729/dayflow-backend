@@ -5,7 +5,7 @@ This is the FastAPI backend for the Dayflow application, using MongoDB for the d
 **Deployed Server URL**: [https://dayflow-backend-llwn.onrender.com](https://dayflow-backend-llwn.onrender.com)
 
 > [!NOTE]
-> To keep the server alive, we are using **UptimeRobot** to ping the server every 10 minutes.
+> To keep the server alive and prevent cold starts, we are using **cron-jobs.org** to ping the server on a regular schedule.
 
 ## Folder Structure
 
@@ -32,7 +32,7 @@ dayflow-backend/
 │   └── services/            (Business Logic)
 │       ├── __init__.py
 │       └── user_service.py  (User-specific business logic)
-├── main.py                  (Entry point script to run with uvicorn)
+├── run.py                   (Entry point script to run with uvicorn)
 ├── requirements.txt         (Project dependencies)
 └── .env                     (Environment variables - ignored by git)
 ```
@@ -84,7 +84,7 @@ fastapi dev app/main.py
 Using the traditional Uvicorn wrapper script:
 
 ```bash
-python main.py
+python run.py
 ```
 
 ## API Documentation
